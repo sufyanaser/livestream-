@@ -1,6 +1,8 @@
 import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { obsService, registerObsIpc, unregisterObsIpc } from './obs/obs-ipc'
+import { registerProjectIpc, unregisterProjectIpc } from './project/project-ipc'
+import { ProjectRepository } from './project/project-repository'
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -35,9 +37,12 @@ const createWindow = (): void => {
   }
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   registerObsIpc()
+  const projectRepository = new ProjectRepository(app.getPath('userData'))
+  await projectRepository.initialize()
+  registerProjectIpc(projectRepository)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -50,5 +55,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   unregisterObsIpc()
+  unregisterProjectIpc()
   void obsService.dispose()
 })
