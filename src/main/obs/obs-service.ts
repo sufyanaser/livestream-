@@ -1,5 +1,5 @@
 import OBSWebSocket from 'obs-websocket-js'
-import type { ObsConnectionConfig, ObsInputSummary, ObsSceneSummary, ObsState } from '../../shared/obs'
+import type { ObsConnectionConfig, ObsInputSummary, ObsLayoutSource, ObsSceneSummary, ObsState } from '../../shared/obs'
 
 const DEFAULT_ENDPOINT = 'ws://127.0.0.1:4455'
 const MAX_RECONNECT_DELAY_MS = 10_000
@@ -17,7 +17,12 @@ const initialState = (): ObsState => ({
   currentProgramSceneName: null,
   currentPreviewSceneName: null,
   scenes: [],
-  inputs: []
+  inputs: [],
+  studioModeEnabled: false,
+  streamActive: false,
+  recordActive: false,
+  currentTransitionName: null,
+  transitionDuration: 300
 })
 
 const readString = (value: unknown): string | null => (typeof value === 'string' ? value : null)
@@ -131,21 +136,82 @@ export class ObsService {
     if (!this.#client.identified) return this.getState()
 
     try {
-      const [sceneResponse, inputResponse] = await Promise.all([
+      const [sceneResponse, inputResponse, studioResponse, transitionResponse, streamResponse, recordResponse] = await Promise.all([
         this.#client.call('GetSceneList'),
-        this.#client.call('GetInputList')
+        this.#client.call('GetInputList'),
+        this.#client.call('GetStudioModeEnabled'),
+        this.#client.call('GetCurrentSceneTransition'),
+        this.#client.call('GetStreamStatus'),
+        this.#client.call('GetRecordStatus')
       ])
       this.#patchState({
         currentProgramSceneName: readString(sceneResponse.currentProgramSceneName),
         currentPreviewSceneName: readString(sceneResponse.currentPreviewSceneName),
         scenes: asRecordArray(sceneResponse.scenes).map(toSceneSummary).filter((scene): scene is ObsSceneSummary => scene !== null),
         inputs: asRecordArray(inputResponse.inputs).map(toInputSummary).filter((input): input is ObsInputSummary => input !== null),
+        studioModeEnabled: studioResponse.studioModeEnabled,
+        streamActive: streamResponse.outputActive,
+        recordActive: recordResponse.outputActive,
+        currentTransitionName: transitionResponse.transitionName,
+        transitionDuration: transitionResponse.transitionDuration,
         error: null
       })
     } catch (error) {
       this.#patchState({ error: getErrorMessage(error) })
     }
     return this.getState()
+  }
+
+  async selectScene(sceneName: string): Promise<ObsState> {
+    this.#requireConnected()
+    if (this.#state.studioModeEnabled) await this.#client.call('SetCurrentPreviewScene', { sceneName })
+    else await this.#client.call('SetCurrentProgramScene', { sceneName })
+    return this.refresh()
+  }
+
+  async take(): Promise<ObsState> {
+    this.#requireConnected()
+    if (this.#state.studioModeEnabled) await this.#client.call('TriggerStudioModeTransition')
+    return this.refresh()
+  }
+
+  async setTransition(name: string, duration: number): Promise<ObsState> {
+    this.#requireConnected()
+    await this.#client.call('SetCurrentSceneTransition', { transitionName: name })
+    await this.#client.call('SetCurrentSceneTransitionDuration', { transitionDuration: Math.max(50, Math.min(duration, 20_000)) })
+    return this.refresh()
+  }
+
+  async ensureGraphics(endpoint: string): Promise<ObsState> {
+    this.#requireConnected()
+    const sceneName = this.#state.currentPreviewSceneName ?? this.#state.currentProgramSceneName
+    if (!sceneName) throw new Error('OBS has no active scene for the graphics source')
+    const inputName = 'NAS Graphics Engine'
+    const existingInput = this.#state.inputs.some((input) => input.name === inputName)
+    if (!existingInput) {
+      await this.#client.call('CreateInput', { sceneName, inputName, inputKind: 'browser_source', inputSettings: { url: endpoint, width: 1920, height: 1080, reroute_audio: false }, sceneItemEnabled: true })
+    } else {
+      try { await this.#client.call('GetSceneItemId', { sceneName, sourceName: inputName }) }
+      catch { await this.#client.call('CreateSceneItem', { sceneName, sourceName: inputName, sceneItemEnabled: true }) }
+      await this.#client.call('SetInputSettings', { inputName, inputSettings: { url: endpoint, width: 1920, height: 1080 }, overlay: true })
+    }
+    return this.refresh()
+  }
+
+  async applyLayout(layoutName: string, sources: ObsLayoutSource[]): Promise<ObsState> {
+    this.#requireConnected()
+    const sceneName = `NAS · ${layoutName}`
+    if (!this.#state.scenes.some((scene) => scene.name === sceneName)) await this.#client.call('CreateScene', { sceneName })
+    const usableSources = sources.filter((source) => this.#state.inputs.some((input) => input.name === source.inputName)).slice(0, 8)
+    for (const source of usableSources) {
+      const sourceName = source.inputName
+      let sceneItemId: number
+      try { sceneItemId = (await this.#client.call('GetSceneItemId', { sceneName, sourceName })).sceneItemId }
+      catch { sceneItemId = (await this.#client.call('CreateSceneItem', { sceneName, sourceName, sceneItemEnabled: true })).sceneItemId }
+      await this.#client.call('SetSceneItemTransform', { sceneName, sceneItemId, sceneItemTransform: { positionX: source.x * 1920, positionY: source.y * 1080, boundsType: 'OBS_BOUNDS_SCALE_INNER', boundsWidth: source.width * 1920, boundsHeight: source.height * 1080, alignment: 5, boundsAlignment: 5 } })
+    }
+    await this.refresh()
+    return this.selectScene(sceneName)
   }
 
   async dispose(): Promise<void> {
@@ -198,5 +264,9 @@ export class ObsService {
   #patchState(patch: Partial<ObsState>): void {
     this.#state = { ...this.#state, ...patch }
     this.#publish(this.getState())
+  }
+
+  #requireConnected(): void {
+    if (!this.#client.identified) throw new Error('OBS is not connected')
   }
 }

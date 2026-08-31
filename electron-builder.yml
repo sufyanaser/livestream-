@@ -1,0 +1,34 @@
+appId: com.nas.broadcast-director
+productName: NAS Broadcast Director
+copyright: Copyright © 2026 NAS
+asar: true
+files:
+  - out/**/*
+  - package.json
+directories:
+  output: release
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: NAS-Broadcast-Director-${version}-Windows-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+mac:
+  category: public.app-category.video
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  artifactName: NAS-Broadcast-Director-${version}-macOS-${arch}.${ext}
+publish:
+  provider: github
+  owner: sufyanaser
+  repo: livestream-
+
