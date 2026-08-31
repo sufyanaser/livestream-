@@ -33,7 +33,7 @@ export function AppShell(): React.JSX.Element {
       case 'guests': return <GuestsPage project={project} updateProject={updateProject} />
       case 'macros': return <MacrosPage project={project} updateProject={updateProject} />
       case 'settings': return <SettingsPage project={project} updateProject={updateProject} />
-      default: return <DirectorPage project={project} obsState={obs.state} connected={obs.isConnected} />
+      default: return <DirectorPage project={project} obsState={obs.state} connected={obs.isConnected} onSceneSelect={(name) => void obs.selectScene(name)} onTake={() => void obs.take()} onTransition={(name) => void obs.setTransition(name, obs.state.transitionDuration)} />
     }
   })()
 

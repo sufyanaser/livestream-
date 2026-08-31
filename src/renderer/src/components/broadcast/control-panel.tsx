@@ -10,9 +10,10 @@ interface SourcePanelProps {
   inputs: ObsInputSummary[]
   scenes: ObsSceneSummary[]
   connected: boolean
+  onSceneSelect?: (sceneName: string) => void
 }
 
-export function SourcePanel({ inputs, scenes, connected }: SourcePanelProps): React.JSX.Element {
+export function SourcePanel({ inputs, scenes, connected, onSceneSelect }: SourcePanelProps): React.JSX.Element {
   return (
     <Panel className="flex min-h-0 flex-col">
       <PanelHeader>
@@ -23,7 +24,7 @@ export function SourcePanel({ inputs, scenes, connected }: SourcePanelProps): Re
         <p className="section-label">Scenes · {scenes.length}</p>
         <div className="space-y-1.5">
           {scenes.map((scene) => (
-            <button key={scene.uuid ?? scene.name} className="control-row w-full" type="button">
+            <button key={scene.uuid ?? scene.name} className="control-row w-full" type="button" onClick={() => onSceneSelect?.(scene.name)}>
               <GripVertical className="size-3.5 text-zinc-700" />
               <span className="size-2 rounded-full bg-sky-400/70" />
               <span className="flex-1 truncate text-left">{scene.name}</span>

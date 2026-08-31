@@ -10,6 +10,7 @@ declare global {
     nasBroadcast: {
       platform: NodeJS.Platform
       runtime: 'electron'
+      system: { copyText: (value: string) => void }
       project: ProjectBridge
       graphics: GraphicsBridge
       remote: RemoteBridge

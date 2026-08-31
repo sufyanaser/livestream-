@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Panel, PanelHeader } from '@/components/ui/panel'
 import { useGraphicsController } from '@/hooks/use-graphics-controller'
 import { cn } from '@/lib/cn'
+import { useObsController } from '@/hooks/use-obs-controller'
 
 const icons: Record<GraphicKind, typeof Type> = { 'lower-third': Type, 'logo-bug': Image, ticker: MessageSquareText, clock: Clock3, countdown: Timer, sponsor: Sparkles }
 type EditorMode = 'lower-third' | 'ticker' | 'clock'
@@ -13,6 +14,7 @@ type EditorMode = 'lower-third' | 'ticker' | 'clock'
 export function GraphicsPage({ project }: { project: ProjectDocument }): React.JSX.Element {
   const [mode, setMode] = useState<EditorMode>('lower-third')
   const { state, update } = useGraphicsController()
+  const obs = useObsController()
   const isVisible = mode === 'lower-third' ? state.lowerThird.visible : mode === 'ticker' ? state.ticker.visible : state.clock.visible
 
   const toggleVisible = (): void => {
@@ -23,7 +25,7 @@ export function GraphicsPage({ project }: { project: ProjectDocument }): React.J
 
   return (
     <div className="page-shell">
-      <div className="page-heading"><div><span className="eyebrow">Local HTML broadcast graphics</span><h2>Graphics Engine</h2><p>Design and operate overlays offline. The output URL becomes one OBS Browser Source during final integration.</p></div><div className="flex gap-2"><Button variant="ghost" onClick={() => void navigator.clipboard.writeText(state.endpoint)}><Copy className="size-4" />Copy output URL</Button><Button><Plus className="size-4" />New template</Button></div></div>
+      <div className="page-heading"><div><span className="eyebrow">Local HTML broadcast graphics</span><h2>Graphics Engine</h2><p>Design and operate overlays offline. The output URL becomes one OBS Browser Source during final integration.</p></div><div className="flex gap-2"><Button variant="ghost" onClick={() => window.nasBroadcast.system.copyText(state.endpoint)}><Copy className="size-4" />Copy output URL</Button><Button variant="ghost" disabled={!obs.isConnected || !state.endpoint} onClick={() => void obs.ensureGraphics(state.endpoint)}>Attach to OBS</Button><Button><Plus className="size-4" />New template</Button></div></div>
       <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(440px,1fr)_340px] gap-4">
         <Panel className="min-h-0"><PanelHeader><h3 className="panel-title">Templates</h3><Badge>{project.graphicTemplates.length}</Badge></PanelHeader><div className="space-y-2 overflow-auto p-3">{project.graphicTemplates.map((template) => { const Icon = icons[template.kind]; return <button key={template.id} type="button" className={cn('flex w-full items-center gap-3 rounded-xl border p-3 text-left transition', mode === template.kind || (mode === 'clock' && template.kind === 'countdown') ? 'border-sky-400/25 bg-sky-400/[0.06]' : 'border-white/[0.06] bg-white/[0.02]')} onClick={() => { if (template.kind === 'lower-third' || template.kind === 'ticker' || template.kind === 'clock' || template.kind === 'countdown') setMode(template.kind === 'countdown' ? 'clock' : template.kind); if (template.kind === 'logo-bug') void update({ logoVisible: !state.logoVisible }); if (template.kind === 'sponsor') void update({ sponsorVisible: !state.sponsorVisible }) }}><div className="flex size-9 items-center justify-center rounded-lg border border-white/[0.07] bg-black/20"><Icon className="size-4" style={{ color: template.accentColor }} /></div><div className="min-w-0 flex-1"><strong className="block truncate text-xs font-medium text-zinc-200">{template.name}</strong><span className="mt-1 block text-[9px] uppercase text-zinc-600">{template.kind}</span></div></button>})}</div></Panel>
 

@@ -3,6 +3,11 @@ export const OBS_CHANNELS = {
   disconnect: 'obs:disconnect',
   getState: 'obs:get-state',
   refresh: 'obs:refresh',
+  selectScene: 'obs:select-scene',
+  take: 'obs:take',
+  setTransition: 'obs:set-transition',
+  ensureGraphics: 'obs:ensure-graphics',
+  applyLayout: 'obs:apply-layout',
   stateChanged: 'obs:state-changed'
 } as const
 
@@ -24,6 +29,14 @@ export interface ObsInputSummary {
   kind: string
 }
 
+export interface ObsLayoutSource {
+  inputName: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface ObsState {
   status: ObsConnectionStatus
   endpoint: string
@@ -35,6 +48,11 @@ export interface ObsState {
   currentPreviewSceneName: string | null
   scenes: ObsSceneSummary[]
   inputs: ObsInputSummary[]
+  studioModeEnabled: boolean
+  streamActive: boolean
+  recordActive: boolean
+  currentTransitionName: string | null
+  transitionDuration: number
 }
 
 export interface ObsBridge {
@@ -42,6 +60,11 @@ export interface ObsBridge {
   connect: (config: ObsConnectionConfig) => Promise<ObsState>
   disconnect: () => Promise<ObsState>
   refresh: () => Promise<ObsState>
+  selectScene: (sceneName: string) => Promise<ObsState>
+  take: () => Promise<ObsState>
+  setTransition: (name: string, duration: number) => Promise<ObsState>
+  ensureGraphics: (endpoint: string) => Promise<ObsState>
+  applyLayout: (layoutName: string, sources: ObsLayoutSource[]) => Promise<ObsState>
   onStateChanged: (listener: (state: ObsState) => void) => () => void
 }
 
