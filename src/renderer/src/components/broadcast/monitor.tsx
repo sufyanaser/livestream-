@@ -7,9 +7,10 @@ interface MonitorProps {
   label: 'PREVIEW' | 'PROGRAM'
   title: string
   live?: boolean
+  signal?: boolean
 }
 
-export function Monitor({ label, title, live = false }: MonitorProps): React.JSX.Element {
+export function Monitor({ label, title, live = false, signal = false }: MonitorProps): React.JSX.Element {
   return (
     <article className={cn('group overflow-hidden rounded-xl border bg-black', live ? 'border-red-500/45' : 'border-white/[0.09]')}>
       <div className="relative aspect-video overflow-hidden bg-[radial-gradient(circle_at_50%_42%,#1c2734_0%,#0b1017_45%,#05070a_100%)]">
@@ -18,8 +19,8 @@ export function Monitor({ label, title, live = false }: MonitorProps): React.JSX
           <div className="mb-3 flex size-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.035]">
             <div className="size-2 rounded-full bg-zinc-600" />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">No video signal</p>
-          <p className="mt-1 text-[11px] text-zinc-700">Connect OBS to populate this monitor</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">{signal ? 'Scene connected' : 'No video signal'}</p>
+          <p className="mt-1 text-[11px] text-zinc-700">{signal ? 'Video thumbnail transport is not enabled yet' : 'Connect OBS to populate this monitor'}</p>
         </div>
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/85 to-transparent p-3 pt-12">
           <Badge tone={live ? 'live' : 'neutral'}>
@@ -39,4 +40,3 @@ export function Monitor({ label, title, live = false }: MonitorProps): React.JSX
     </article>
   )
 }
-
