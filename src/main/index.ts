@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
+import { obsService, registerObsIpc, unregisterObsIpc } from './obs/obs-ipc'
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -25,6 +26,8 @@ const createWindow = (): void => {
     return { action: 'deny' }
   })
 
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault())
+
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
@@ -33,6 +36,8 @@ const createWindow = (): void => {
 }
 
 void app.whenReady().then(() => {
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+  registerObsIpc()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -41,4 +46,9 @@ void app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('before-quit', () => {
+  unregisterObsIpc()
+  void obsService.dispose()
 })

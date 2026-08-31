@@ -2,26 +2,49 @@ import { ChevronRight, CirclePlay, GripVertical, Layers3, Plus } from 'lucide-re
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Panel, PanelHeader } from '@/components/ui/panel'
+import type { ObsInputSummary, ObsSceneSummary } from '../../../../shared/obs'
 
-const sources = ['Camera 01', 'Camera 02', 'Media Player', 'Sponsor Loop']
 const layouts = ['Full Frame', '2-Up Split', 'Picture in Picture', 'Quad View']
 
-export function SourcePanel(): React.JSX.Element {
+interface SourcePanelProps {
+  inputs: ObsInputSummary[]
+  scenes: ObsSceneSummary[]
+  connected: boolean
+}
+
+export function SourcePanel({ inputs, scenes, connected }: SourcePanelProps): React.JSX.Element {
   return (
     <Panel className="flex min-h-0 flex-col">
       <PanelHeader>
         <div className="flex items-center gap-2"><Layers3 className="size-4 text-sky-300" /><h2 className="panel-title">Sources</h2></div>
         <Button aria-label="Add source" size="icon" variant="ghost" className="size-7"><Plus className="size-3.5" /></Button>
       </PanelHeader>
-      <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-2.5">
-        {sources.map((source, index) => (
-          <button key={source} className="control-row w-full" type="button">
+      <div className="min-h-0 flex-1 overflow-auto p-2.5">
+        <p className="section-label">Scenes · {scenes.length}</p>
+        <div className="space-y-1.5">
+          {scenes.map((scene) => (
+            <button key={scene.uuid ?? scene.name} className="control-row w-full" type="button">
+              <GripVertical className="size-3.5 text-zinc-700" />
+              <span className="size-2 rounded-full bg-sky-400/70" />
+              <span className="flex-1 truncate text-left">{scene.name}</span>
+              <Badge className="h-5 px-1.5">Scene</Badge>
+            </button>
+          ))}
+          {connected && scenes.length === 0 && <p className="empty-state">No scenes returned by OBS</p>}
+        </div>
+        <p className="section-label mt-4">Sources · {inputs.length}</p>
+        <div className="space-y-1.5">
+        {inputs.map((input) => (
+          <button key={input.uuid ?? input.name} className="control-row w-full" type="button">
             <GripVertical className="size-3.5 text-zinc-700" />
-            <span className="size-2 rounded-full bg-zinc-700" />
-            <span className="flex-1 text-left">{source}</span>
-            <Badge className="h-5 px-1.5" tone={index < 2 ? 'ready' : 'neutral'}>{index < 2 ? 'Ready' : 'Idle'}</Badge>
+            <span className="size-2 rounded-full bg-emerald-400/60" />
+            <span className="min-w-0 flex-1 truncate text-left">{input.name}</span>
+            <Badge className="h-5 max-w-20 truncate px-1.5" tone="ready">{input.kind}</Badge>
           </button>
         ))}
+        {!connected && <p className="empty-state">Connect OBS to load live scenes and sources</p>}
+        {connected && inputs.length === 0 && <p className="empty-state">No sources returned by OBS</p>}
+        </div>
       </div>
     </Panel>
   )
@@ -64,4 +87,3 @@ export function RundownPanel(): React.JSX.Element {
     </Panel>
   )
 }
-
