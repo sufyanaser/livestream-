@@ -1,9 +1,9 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { PROJECT_SCHEMA_VERSION, type ProjectDocument } from '../../shared/project'
 import { createDefaultProject } from './default-project'
 
-const isProjectDocument = (value: unknown): value is ProjectDocument => {
+export const isProjectDocument = (value: unknown): value is ProjectDocument => {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<ProjectDocument>
   return candidate.schemaVersion === PROJECT_SCHEMA_VERSION && typeof candidate.id === 'string' && typeof candidate.name === 'string' && Array.isArray(candidate.layouts) && Array.isArray(candidate.rundown)
@@ -47,6 +47,7 @@ export class ProjectRepository {
     this.#writeQueue = this.#writeQueue.then(async () => {
       const temporaryPath = `${this.#filePath}.tmp`
       await writeFile(temporaryPath, payload, { encoding: 'utf8', flag: 'w' })
+      await copyFile(this.#filePath, `${this.#filePath}.backup`).catch(() => undefined)
       await rename(temporaryPath, this.#filePath)
     })
     await this.#writeQueue
@@ -54,4 +55,3 @@ export class ProjectRepository {
     return this.get()
   }
 }
-

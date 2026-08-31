@@ -3,6 +3,11 @@ import { join } from 'node:path'
 import { obsService, registerObsIpc, unregisterObsIpc } from './obs/obs-ipc'
 import { registerProjectIpc, unregisterProjectIpc } from './project/project-ipc'
 import { ProjectRepository } from './project/project-repository'
+import { graphicsService, registerGraphicsIpc, unregisterGraphicsIpc } from './graphics/graphics-ipc'
+import { registerRemoteIpc, remotePublisher, unregisterRemoteIpc } from './remote/remote-ipc'
+import { RemoteService } from './remote/remote-service'
+
+let remoteService: RemoteService | null = null
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -40,9 +45,13 @@ const createWindow = (): void => {
 void app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   registerObsIpc()
+  await graphicsService.start()
+  registerGraphicsIpc()
   const projectRepository = new ProjectRepository(app.getPath('userData'))
   await projectRepository.initialize()
   registerProjectIpc(projectRepository)
+  remoteService = new RemoteService(projectRepository, graphicsService, remotePublisher)
+  registerRemoteIpc(remoteService)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -56,5 +65,9 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   unregisterObsIpc()
   unregisterProjectIpc()
+  unregisterGraphicsIpc()
+  unregisterRemoteIpc()
   void obsService.dispose()
+  void graphicsService.stop()
+  if (remoteService) void remoteService.disable()
 })

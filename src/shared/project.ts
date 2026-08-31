@@ -3,6 +3,8 @@ export const PROJECT_SCHEMA_VERSION = 1 as const
 export const PROJECT_CHANNELS = {
   get: 'project:get',
   save: 'project:save',
+  import: 'project:import',
+  export: 'project:export',
   changed: 'project:changed'
 } as const
 
@@ -106,6 +108,7 @@ export interface ProjectDocument {
 export interface ProjectBridge {
   get: () => Promise<ProjectDocument>
   save: (project: ProjectDocument) => Promise<ProjectDocument>
+  importProject: () => Promise<ProjectDocument | null>
+  exportProject: (project: ProjectDocument) => Promise<string | null>
   onChanged: (listener: (project: ProjectDocument) => void) => () => void
 }
-

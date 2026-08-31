@@ -13,12 +13,14 @@ import { RundownPage } from '@/features/rundown/rundown-page'
 import { SettingsPage } from '@/features/settings/settings-page'
 import { useObsController } from '@/hooks/use-obs-controller'
 import { useProject } from '@/state/project-context'
+import { useOperatorHotkeys } from '@/hooks/use-operator-hotkeys'
 
 export function AppShell(): React.JSX.Element {
   const [activePage, setActivePage] = useState<WorkspacePage>('director')
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false)
   const obs = useObsController()
   const { project, saveStatus, updateProject, saveNow } = useProject()
+  useOperatorHotkeys(setActivePage, saveNow)
 
   if (!project) return <div className="flex min-h-screen items-center justify-center bg-[#07090d] text-xs uppercase tracking-[0.2em] text-zinc-600">Loading broadcast workspace…</div>
 

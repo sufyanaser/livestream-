@@ -9,6 +9,8 @@ interface ProjectContextValue {
   saveStatus: SaveStatus
   updateProject: (updater: (project: ProjectDocument) => ProjectDocument) => void
   saveNow: () => Promise<void>
+  importProject: () => Promise<void>
+  exportProject: () => Promise<void>
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null)
@@ -83,7 +85,20 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     }
   }, [])
 
-  return <ProjectContext.Provider value={{ project, saveStatus, updateProject, saveNow }}>{children}</ProjectContext.Provider>
+  const importProject = useCallback(async (): Promise<void> => {
+    const imported = await window.nasBroadcast.project.importProject()
+    if (!imported) return
+    projectRef.current = imported
+    setProject(imported)
+    setSaveStatus('saved')
+  }, [])
+
+  const exportProject = useCallback(async (): Promise<void> => {
+    const current = projectRef.current
+    if (current) await window.nasBroadcast.project.exportProject(current)
+  }, [])
+
+  return <ProjectContext.Provider value={{ project, saveStatus, updateProject, saveNow, importProject, exportProject }}>{children}</ProjectContext.Provider>
 }
 
 export function useProject(): ProjectContextValue {
